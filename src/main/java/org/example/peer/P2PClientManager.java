@@ -7,33 +7,12 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * ============================================================================
- * FOLDER: org.example.peer
- * FILE: P2PClientManager.java
- * ============================================================================
- * CHỨC NĂNG:
- * Đóng vai trò Client phía nút Peer, thực thi các kết nối đi (Outgoing Connections) đến các Peer khác:
- * 1. Gửi tin nhắn Chat P2P trực tiếp tới IP & Port của Peer đích.
- * 2. Tải File P2P trực tiếp từ IP & Port của Peer chứa file.
- * 
- * CÁCH HOẠT ĐỘNG:
- * 1. sendDirectChatMessageAsync(): Mở Socket nối trực tiếp tới P2PServer của Peer đích, 
- *    gửi dòng lệnh P2P_CHAT rồi đóng Socket.
- * 2. downloadFileAsync(): Chạy trên luồng bất đồng bộ (Background Thread), mở Socket nối 
- *    trực tiếp đến cổng P2PServer của nút Peer sở hữu tệp tin. 
- *    - Gửi yêu cầu P2P_FILE_REQ.
- *    - Đọc nhận phản hồi P2P_FILE_OK kèm dung lượng tổng.
- *    - Ghi dữ liệu luồng byte vào đĩa cứng (FileOutputStream), tính toán phần trăm hoàn thành,
- *      tốc độ truyền dữ liệu (KB/s) và phát tín hiệu cho Giao diện UI cập nhật thanh tiến trình.
- */
+
 public class P2PClientManager {
     // Thread pool chuyên phục vụ cho các tác vụ tải file bất đồng bộ
     private final ExecutorService downloadExecutor = Executors.newCachedThreadPool();
 
-    /**
-     * Interface lắng nghe và cập nhật tiến trình tải file P2P về cho UI
-     */
+    // Interface lắng nghe và cập nhật tiến trình tải file P2P về cho UI
     public interface DownloadProgressListener {
         void onProgressUpdate(String fileName, long bytesDownloaded, long totalBytes, double speedKBps);
         void onDownloadComplete(String fileName, File savedFile);
@@ -45,14 +24,7 @@ public class P2PClientManager {
         void onFailure(String error);
     }
 
-    /**
-     * Gửi tin nhắn Chat P2P trực tiếp bất đồng bộ tới một Peer khác
-     * @param targetIp Địa chỉ IP máy Peer đích
-     * @param targetP2pPort Cổng P2P của Peer đích
-     * @param myUsername Tên người gửi
-     * @param message Nội dung tin nhắn
-     * @param callback Callback nhận kết quả gửi thành công/thất bại
-     */
+
     public void sendDirectChatMessageAsync(String targetIp, int targetP2pPort, String myUsername, String message, ChatCallback callback) {
         new Thread(() -> {
             try (Socket socket = new Socket(targetIp, targetP2pPort);
@@ -68,15 +40,7 @@ public class P2PClientManager {
         }).start();
     }
 
-    /**
-     * Thực hiện tải file P2P trực tiếp bất đồng bộ từ nút Peer chia sẻ
-     * @param targetIp Địa chỉ IP của Peer sở hữu file
-     * @param targetP2pPort Cổng P2P của Peer sở hữu file
-     * @param myUsername Tên Peer tải xuống
-     * @param fileName Tên tệp tin cần tải
-     * @param destinationDir Thư mục lưu file sau khi tải về thành công
-     * @param listener Interface nhận sự kiện cập nhật tiến trình % và tốc độ KB/s
-     */
+
     public void downloadFileAsync(String targetIp, int targetP2pPort, String myUsername, String fileName, File destinationDir, DownloadProgressListener listener) {
         downloadExecutor.execute(() -> {
             File destinationFile = new File(destinationDir, fileName);
