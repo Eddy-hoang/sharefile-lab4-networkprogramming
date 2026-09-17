@@ -10,7 +10,15 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * ============================================================================
+ * FOLDER: org.example.server
+ * FILE: ClientHandler.java
+ * ============================================================================
+ * CHỨC NĂNG:
+ * Luồng thực thi (Runnable thread) xử lý giao tiếp riêng biệt cho MỖI nút Peer 
+ * kết nối đến Central Directory Server.
+ */
 public class ClientHandler implements Runnable {
     private final Socket socket;           // Socket kết nối TCP trực tiếp với Peer client
     private final ServerMain server;       // Tham chiếu đến Server chính để gọi các hàm quản lý chung
@@ -31,6 +39,17 @@ public class ClientHandler implements Runnable {
             out = new PrintWriter(socket.getOutputStream(), true);
 
             String clientIp = socket.getInetAddress().getHostAddress();
+
+            // Tự động chuyển đổi 127.0.0.1 thành IP LAN thật của máy chủ nếu Peer chạy cùng máy với Server
+            if ("127.0.0.1".equals(clientIp) || "0:0:0:0:0:0:0:1".equals(clientIp)) {
+                try {
+                    String localIp = socket.getLocalAddress().getHostAddress();
+                    if (localIp != null && !"127.0.0.1".equals(localIp) && !"0:0:0:0:0:0:0:1".equals(localIp)) {
+                        clientIp = localIp;
+                    }
+                } catch (Exception ignored) {}
+            }
+
             String inputLine;
 
             // Vòng lặp liên tục đọc các câu lệnh nhận được từ Socket của Client
@@ -112,7 +131,9 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // Xử lý lệnh Cập nhật danh sách file chia sẻ của Peer
+    /**
+     * Xử lý lệnh Cập nhật danh sách file chia sẻ của Peer
+     */
     private void handleUpdateFiles(String[] tokens) {
         if (peerInfo == null) {
             sendResponse(MessageProtocol.buildMessage(MessageProtocol.RES_ERROR, "Chưa đăng ký tài khoản."));
@@ -135,12 +156,16 @@ public class ClientHandler implements Runnable {
         server.log("Peer " + peerInfo.getUsername() + " đã cập nhật " + list.size() + " file chia sẻ.");
     }
 
-    // Xử lý lệnh yêu cầu danh sách các Peer đang online
+    /**
+     * Xử lý lệnh yêu cầu danh sách các Peer đang online
+     */
     private void handleGetPeers() {
         sendResponse(server.buildPeerListResponse());
     }
 
-    // Xử lý lệnh Tìm kiếm file từ chỉ mục danh sách file của Server trung tâm
+    /**
+     * Xử lý lệnh Tìm kiếm file từ chỉ mục danh sách file của Server trung tâm (Napster Model)
+     */
     private void handleSearchFiles(String[] tokens) {
         String query = (tokens.length >= 2) ? tokens[1].trim().toLowerCase() : "";
         List<FileDescriptor> results = server.searchFiles(query, peerInfo != null ? peerInfo.getUsername() : "");
@@ -153,7 +178,9 @@ public class ClientHandler implements Runnable {
         sendResponse(MessageProtocol.buildMessage(MessageProtocol.RES_SEARCH_RESULTS, sb.toString()));
     }
 
-    // Trả về thông tin IP & Cổng P2P của 1 Peer cụ thể
+    /**
+     * Trả về thông tin IP & Cổng P2P của 1 Peer cụ thể
+     */
     private void handleGetEndpoint(String[] tokens) {
         if (tokens.length < 2) return;
         String targetUser = tokens[1].trim();
@@ -165,14 +192,18 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // Gửi chuỗi tin nhắn phản hồi về cho Client kết nối với Handler này
+    /**
+     * Gửi chuỗi tin nhắn phản hồi về cho Client kết nối với Handler này
+     */
     public void sendResponse(String message) {
         if (out != null) {
             out.println(message);
         }
     }
 
-    // Dọn dẹp tài nguyên khi Peer ngắt kết nối
+    /**
+     * Dọn dẹp tài nguyên khi Peer ngắt kết nối
+     */
     private void cleanup() {
         running = false;
         if (peerInfo != null) {
